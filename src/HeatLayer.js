@@ -139,13 +139,14 @@ L.HeatLayer = (L.Layer ? L.Layer : L.Class).extend({
             max = this.options.max === undefined ? 1 : this.options.max,
             maxZoom = this.options.maxZoom === undefined ? this._map.getMaxZoom() : this.options.maxZoom,
             v = 1 / Math.pow(2, Math.max(0, Math.min(maxZoom - this._map.getZoom(), 12))),
+            v2 = 1 / Math.pow(1.5, Math.max(0, Math.min(maxZoom - this._map.getZoom(), 12))),
             cellSize = r / 2,
             grid = [],
             panePos = this._map._getMapPanePos(),
             offsetX = panePos.x % cellSize,
             offsetY = panePos.y % cellSize,
             i, len, p, cell, x, y, j, len2, k;
-
+           
         // console.time('process');
         for (i = 0, len = this._latlngs.length; i < len; i++) {
             p = this._map.latLngToContainerPoint(this._latlngs[i]);
@@ -156,18 +157,21 @@ L.HeatLayer = (L.Layer ? L.Layer : L.Class).extend({
                 var alt =
                     this._latlngs[i].alt !== undefined ? this._latlngs[i].alt :
                     this._latlngs[i][2] !== undefined ? +this._latlngs[i][2] : 1;
-                k = alt * v;
+                k =  v2*alt;
+                console.log(v);
 
                 grid[y] = grid[y] || [];
                 cell = grid[y][x];
-
+								
                 if (!cell) {
                     grid[y][x] = [p.x, p.y, k];
-
+                    if(this._latlngs[i][3]) grid[y][x][3] = this._latlngs[i][3]
                 } else {
                     cell[0] = (cell[0] * cell[2] + p.x * k) / (cell[2] + k); // x
                     cell[1] = (cell[1] * cell[2] + p.y * k) / (cell[2] + k); // y
                     cell[2] += k; // cumulated intensity value
+                    if(this._latlngs[i][3]) cell[3] = this._latlngs[i][3]
+                    
                 }
             }
         }
@@ -177,11 +181,13 @@ L.HeatLayer = (L.Layer ? L.Layer : L.Class).extend({
                 for (j = 0, len2 = grid[i].length; j < len2; j++) {
                     cell = grid[i][j];
                     if (cell) {
-                        data.push([
-                            Math.round(cell[0]),
-                            Math.round(cell[1]),
-                            Math.min(cell[2], max)
-                        ]);
+                		var one = [
+                		           Math.round(cell[0]),
+                                   Math.round(cell[1]),
+                                   Math.min(cell[2], max)
+                                 ];
+						if (cell.length == 4) one.push(cell[3])
+                        data.push(one);
                     }
                 }
             }
